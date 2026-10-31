@@ -62,7 +62,7 @@ struct StopwatchesApp: App {
                 }
             }
         }
-        .menuBarExtraStyle(.menu)
+        .menuBarExtraStyle(.window)
     }
 }
 
@@ -71,28 +71,108 @@ struct MenuBarContent: View {
     @AppStorage("alwaysOnTop") private var alwaysOnTop = false
     @Environment(\.openWindow) private var openWindow
 
+    // A SwiftUI panel instead of a native menu: a native menu redraws its rows
+    // every time a live time changes, which breaks the hover highlight.
     var body: some View {
-        ForEach(store.stopwatches) { watch in
-            Button {
-                store.toggle(watch.id)
-            } label: {
-                Text("\(watch.isRunning ? "Pause" : "Start") \(watch.name)  \(TimeFormat.compact(watch.elapsed()))")
+        VStack(alignment: .leading, spacing: 4) {
+            if store.stopwatches.isEmpty {
+                Text("No stopwatches")
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            } else {
+                ForEach(store.stopwatches) { watch in
+                    PanelRow(watch: watch)
+                }
             }
-        }
-        if !store.stopwatches.isEmpty { Divider() }
-        Button("New Stopwatch") { store.add() }
-        Button("Pause All") { store.pauseAll() }
-            .disabled(store.runningCount == 0)
-        Divider()
-        Toggle("Always on Top", isOn: $alwaysOnTop)
-        Button("Show Window") {
-            if !MainWindow.show() {
-                openWindow(id: "main")
-                NSApp.activate(ignoringOtherApps: true)
+
+            Divider().padding(.vertical, 4)
+
+            PanelButton("New Stopwatch", systemImage: "plus") { store.add() }
+            PanelButton("Pause All", systemImage: "pause.circle") { store.pauseAll() }
+                .disabled(store.runningCount == 0)
+
+            Divider().padding(.vertical, 4)
+
+            Toggle(isOn: $alwaysOnTop) {
+                Label("Always on Top", systemImage: alwaysOnTop ? "pin.fill" : "pin")
             }
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+
+            PanelButton("Show Window", systemImage: "macwindow") {
+                if !MainWindow.show() {
+                    openWindow(id: "main")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+            }
+
+            Divider().padding(.vertical, 4)
+
+            PanelButton("Quit Stopwatches", systemImage: "power") { NSApp.terminate(nil) }
         }
-        Divider()
-        Button("Quit Stopwatches") { NSApp.terminate(nil) }
-            .keyboardShortcut("q")
+        .padding(8)
+        .frame(width: 280)
+    }
+}
+
+private struct PanelRow: View {
+    @EnvironmentObject var store: StopwatchStore
+    let watch: Stopwatch
+
+    var body: some View {
+        let accent = Palette.color(watch.colorIndex)
+        HStack(spacing: 10) {
+            Circle().fill(accent).frame(width: 9, height: 9)
+            Text(watch.name).lineLimit(1)
+            Spacer(minLength: 8)
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text(TimeFormat.compact(watch.elapsed(at: context.date)))
+                    .monospacedDigit()
+                    .foregroundStyle(watch.isRunning ? accent : .secondary)
+            }
+            Button { store.toggle(watch.id) } label: {
+                Image(systemName: watch.isRunning ? "pause.fill" : "play.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 26, height: 26)
+                    .background(accent, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .help(watch.isRunning ? "Pause" : "Start")
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+    }
+}
+
+private struct PanelButton: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+    @State private var hovering = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    init(_ title: String, systemImage: String, action: @escaping () -> Void) {
+        self.title = title
+        self.systemImage = systemImage
+        self.action = action
+    }
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(hovering && isEnabled ? Color.primary.opacity(0.1) : .clear,
+                    in: RoundedRectangle(cornerRadius: 6))
+        .opacity(isEnabled ? 1 : 0.4)
+        .onHover { hovering = $0 }
     }
 }
