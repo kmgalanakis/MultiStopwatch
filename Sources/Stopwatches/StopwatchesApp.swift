@@ -21,6 +21,31 @@ final class CloseHider: NSObject {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var clickMonitor: Any?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // A click anywhere outside a text field ends editing, so a stopwatch name
+        // does not stay focused after the user clicks away.
+        clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { event in
+            guard let window = event.window,
+                  window.firstResponder is NSText,
+                  let root = window.contentView?.superview else { return event }
+            if !Self.isTextInput(root.hitTest(event.locationInWindow)) {
+                window.makeFirstResponder(nil)
+            }
+            return event
+        }
+    }
+
+    private static func isTextInput(_ view: NSView?) -> Bool {
+        var current = view
+        while let v = current {
+            if v is NSTextField || v is NSText { return true }
+            current = v.superview
+        }
+        return false
+    }
+
     /// Runs when the user clicks the app icon in the Dock or Finder.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         !MainWindow.show()
@@ -32,6 +57,7 @@ struct StopwatchesApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = StopwatchStore()
     @AppStorage("alwaysOnTop") private var alwaysOnTop = false
+    @AppStorage("compactCards") private var compactCards = false
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -50,6 +76,10 @@ struct StopwatchesApp: App {
             CommandGroup(replacing: .newItem) {
                 Button("New Stopwatch") { store.add() }
                     .keyboardShortcut("n")
+            }
+            CommandGroup(after: .toolbar) {
+                Toggle("Compact Cards", isOn: $compactCards)
+                    .keyboardShortcut("c", modifiers: [.command, .option])
             }
             CommandGroup(after: .windowArrangement) {
                 Toggle("Always on Top", isOn: $alwaysOnTop)
@@ -81,6 +111,7 @@ struct StopwatchesApp: App {
 struct MenuBarContent: View {
     @EnvironmentObject var store: StopwatchStore
     @AppStorage("alwaysOnTop") private var alwaysOnTop = false
+    @AppStorage("compactCards") private var compactCards = false
     @Environment(\.openWindow) private var openWindow
 
     // A SwiftUI panel instead of a native menu: a native menu redraws its rows
@@ -106,13 +137,11 @@ struct MenuBarContent: View {
 
             Divider().padding(.vertical, 4)
 
-            Toggle(isOn: $alwaysOnTop) {
-                Label("Always on Top", systemImage: alwaysOnTop ? "pin.fill" : "pin")
-            }
-            .toggleStyle(.switch)
-            .controlSize(.small)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            PanelSwitch("Always on Top", systemImage: alwaysOnTop ? "pin.fill" : "pin",
+                        isOn: $alwaysOnTop)
+            PanelSwitch("Compact Cards",
+                        systemImage: compactCards ? "rectangle.grid.1x2.fill" : "rectangle.grid.1x2",
+                        isOn: $compactCards)
 
             PanelButton("Show Window", systemImage: "macwindow") {
                 if !MainWindow.show() {
@@ -127,6 +156,19 @@ struct MenuBarContent: View {
         }
         .padding(8)
         .frame(width: 280)
+        .background(PanelBackground(cornerRadius: 12))
+        // The system shadow is square, so draw a rounded one under the panel instead.
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(nsColor: .windowBackgroundColor))
+                .shadow(color: .black.opacity(0.14), radius: 7, y: 3)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
+        )
+        // Room around the panel for the shadow.
+        .padding(EdgeInsets(top: 2, leading: 10, bottom: 16, trailing: 10))
     }
 }
 
@@ -154,6 +196,78 @@ private struct PanelRow: View {
             }
             .buttonStyle(.plain)
             .help(watch.isRunning ? "Pause" : "Start")
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+    }
+}
+
+/// Draws the menu bar panel's frosted background with rounded corners that match
+/// macOS menus. SwiftUI draws its own panel background with a small fixed corner
+/// radius, so that background is hidden and this one is drawn in its place.
+private struct PanelBackground: NSViewRepresentable {
+    let cornerRadius: CGFloat
+
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = NSVisualEffectView()
+        view.material = .menu
+        view.blendingMode = .behindWindow
+        view.state = .active
+        view.maskImage = Self.roundedMask(radius: cornerRadius)
+        DispatchQueue.main.async { hideSystemBackground(behind: view) }
+        return view
+    }
+
+    func updateNSView(_ view: NSVisualEffectView, context: Context) {
+        DispatchQueue.main.async { hideSystemBackground(behind: view) }
+    }
+
+    /// The system background is drawn by sibling views behind ours that cover the whole
+    /// panel, which is larger than our background because of the room left for the shadow.
+    /// The system shadow is square, so it is turned off; the panel draws its own.
+    private func hideSystemBackground(behind view: NSView) {
+        guard let host = view.superview, let container = host.superview,
+              let index = container.subviews.firstIndex(of: host) else { return }
+        for sibling in container.subviews[..<index]
+        where sibling.frame != host.frame && sibling.frame.contains(host.frame) {
+            sibling.isHidden = true
+        }
+        view.window?.hasShadow = false
+    }
+
+    private static func roundedMask(radius: CGFloat) -> NSImage {
+        let edge = radius * 2 + 1
+        let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
+            NSColor.black.setFill()
+            NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+            return true
+        }
+        image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+        image.resizingMode = .stretch
+        return image
+    }
+}
+
+/// Label on the left, switch on the right, so several switches line up.
+private struct PanelSwitch: View {
+    let title: String
+    let systemImage: String
+    @Binding var isOn: Bool
+
+    init(_ title: String, systemImage: String, isOn: Binding<Bool>) {
+        self.title = title
+        self.systemImage = systemImage
+        self._isOn = isOn
+    }
+
+    var body: some View {
+        HStack {
+            Label(title, systemImage: systemImage)
+            Spacer()
+            Toggle(title, isOn: $isOn)
+                .labelsHidden()
+                .toggleStyle(.switch)
+                .controlSize(.small)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

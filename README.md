@@ -4,7 +4,12 @@ A small native macOS app for running several stopwatches at once.
 
 ![Four stopwatches in the main window](docs/screenshots/main.png)
 
+Compact cards fit more stopwatches in a small window:
+
+![The same stopwatches as slim one-line cards](docs/screenshots/compact.png)
+
 - Add as many stopwatches as you need. Each has a name, a color and its own controls.
+- Switch to compact, one-line cards with the toolbar button or Option-Command-C.
 - Double-click a time to set it by hand, with separate hours, minutes and seconds slots.
 - Keep the window always on top with the pin button or Shift-Command-T.
 - See the running time in the menu bar. Click it for a panel with live times and quick controls.

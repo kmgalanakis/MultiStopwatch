@@ -14,7 +14,7 @@ fi
 ARCH_FLAGS=()
 if [ "${UNIVERSAL:-0}" = "1" ]; then ARCH_FLAGS=(--arch arm64 --arch x86_64); fi
 if [ -z "${VERSION:-}" ]; then
-    VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
+    VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)"
     VERSION="${VERSION:-1.0.0}"
 fi
 BUILD="${BUILD:-1}"

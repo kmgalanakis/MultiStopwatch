@@ -4,23 +4,28 @@ import AppKit
 struct ContentView: View {
     @EnvironmentObject var store: StopwatchStore
     @AppStorage("alwaysOnTop") private var alwaysOnTop = false
+    @AppStorage("compactCards") private var compact = false
 
-    private let columns = [GridItem(.adaptive(minimum: 280, maximum: 400), spacing: 16)]
+    private var spacing: CGFloat { compact ? 10 : 16 }
+    private var columns: [GridItem] {
+        [GridItem(.adaptive(minimum: compact ? 360 : 280, maximum: compact ? 500 : 400), spacing: spacing)]
+    }
 
     var body: some View {
         ScrollView {
             if store.stopwatches.isEmpty {
                 emptyState
             } else {
-                LazyVGrid(columns: columns, spacing: 16) {
+                LazyVGrid(columns: columns, spacing: spacing) {
                     ForEach($store.stopwatches) { $watch in
                         StopwatchCard(watch: $watch)
                     }
                 }
-                .padding(20)
+                .padding(compact ? 14 : 20)
+                .animation(.easeInOut(duration: 0.2), value: compact)
             }
         }
-        .frame(minWidth: 320, minHeight: 240)
+        .frame(minWidth: 400, minHeight: 240)
         .background(VisualEffectBackground())
         .background(WindowConfigurator(alwaysOnTop: alwaysOnTop))
         .toolbar {
@@ -30,6 +35,10 @@ struct ContentView: View {
                 Button { store.pauseAll() } label: { Label("Pause All", systemImage: "pause.circle") }
                     .help("Pause all running stopwatches")
                     .disabled(store.runningCount == 0)
+                Toggle(isOn: $compact) {
+                    Label("Compact Cards", systemImage: compact ? "rectangle.grid.1x2.fill" : "rectangle.grid.1x2")
+                }
+                .help(compact ? "Show full-size cards" : "Show slim, one-line cards")
                 Toggle(isOn: $alwaysOnTop) {
                     Label("Always on Top", systemImage: alwaysOnTop ? "pin.fill" : "pin")
                 }
@@ -55,90 +64,30 @@ struct ContentView: View {
 struct StopwatchCard: View {
     @EnvironmentObject var store: StopwatchStore
     @Binding var watch: Stopwatch
+    @AppStorage("compactCards") private var compact = false
     @State private var hovering = false
-
     @State private var editing = false
 
     private var accent: Color { Palette.color(watch.colorIndex) }
-    private var timeFont: Font { .system(size: 42, weight: .semibold, design: .rounded).monospacedDigit() }
+    private var cornerRadius: CGFloat { compact ? 12 : 18 }
+    private var timeFont: Font {
+        .system(size: compact ? 22 : 42, weight: .semibold, design: .rounded).monospacedDigit()
+    }
 
     private func beginEdit() { editing = true }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(accent)
-                    .frame(width: 10, height: 10)
-                    .onTapGesture { watch.colorIndex += 1 }
-                    .help("Click to change color")
-                TextField("Name", text: $watch.name)
-                    .textFieldStyle(.plain)
-                    .font(.headline)
-                Spacer(minLength: 0)
-                Button { store.remove(watch.id) } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .help("Delete stopwatch")
-                .opacity(hovering ? 1 : 0)
-            }
-
-            if editing {
-                TimeEditor(initial: watch.elapsed(), font: timeFont) { value in
-                    store.setElapsed(watch.id, to: value)
-                    editing = false
-                } onCancel: {
-                    editing = false
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !watch.isRunning)) { context in
-                    Text(TimeFormat.full(watch.elapsed(at: context.date)))
-                        .font(timeFont)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .foregroundStyle(watch.isRunning ? accent : .primary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .contentShape(Rectangle())
-                .onTapGesture(count: 2, perform: beginEdit)
-                .help("Double-click to set the time")
-            }
-
-            HStack(spacing: 10) {
-                Button { store.toggle(watch.id) } label: {
-                    Label(watch.isRunning ? "Pause" : (watch.accumulated > 0 ? "Resume" : "Start"),
-                          systemImage: watch.isRunning ? "pause.fill" : "play.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(accent, in: Capsule())
-                        .foregroundStyle(.white)
-                }
-                .buttonStyle(.plain)
-
-                Button { store.reset(watch.id) } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 13, weight: .semibold))
-                        .frame(width: 34, height: 34)
-                        .background(.quaternary, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .help("Reset to zero")
-                .disabled(watch.elapsed() == 0)
-            }
+        Group {
+            if compact { compactLayout } else { fullLayout }
         }
-        .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(compact ? 10 : 16)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .strokeBorder(watch.isRunning ? accent.opacity(0.6) : Color.primary.opacity(0.08),
                               lineWidth: watch.isRunning ? 1.5 : 1)
         )
-        .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
+        .shadow(color: .black.opacity(0.08), radius: compact ? 4 : 8, y: compact ? 1 : 2)
         .animation(.easeInOut(duration: 0.2), value: watch.isRunning)
         .onHover { hovering = $0 }
         .contextMenu {
@@ -148,6 +97,125 @@ struct StopwatchCard: View {
             Button("Delete", role: .destructive) { store.remove(watch.id) }
         }
     }
+
+    // MARK: Layouts
+
+    private var fullLayout: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                colorDot
+                nameField.font(.headline)
+                Spacer(minLength: 0)
+                deleteButton
+            }
+
+            time.frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 10) {
+                Button { store.toggle(watch.id) } label: {
+                    Image(systemName: watch.isRunning ? "pause.fill" : "play.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 30, height: 30)
+                        .background(accent, in: Circle())
+                        .foregroundStyle(.white)
+                }
+                .buttonStyle(.plain)
+                .help(watch.isRunning ? "Pause" : (watch.accumulated > 0 ? "Resume" : "Start"))
+
+                resetButton(size: 30)
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private var compactLayout: some View {
+        HStack(spacing: 8) {
+            colorDot
+            // The name fills the free space, which stretches every card to the full
+            // column width so the times and buttons line up on the right.
+            nameField
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+                .frame(minWidth: 90, maxWidth: .infinity, alignment: .leading)
+            time.fixedSize()
+            Button { store.toggle(watch.id) } label: {
+                Image(systemName: watch.isRunning ? "pause.fill" : "play.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(accent, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .help(watch.isRunning ? "Pause" : "Start")
+            resetButton(size: 28)
+            deleteButton
+        }
+    }
+
+    // MARK: Pieces
+
+    private var colorDot: some View {
+        Circle()
+            .fill(accent)
+            .frame(width: 10, height: 10)
+            .onTapGesture { watch.colorIndex += 1 }
+            .help("Click to change color")
+    }
+
+    private var nameField: some View {
+        TextField("Name", text: $watch.name)
+            .textFieldStyle(.plain)
+            .onSubmit {
+                // Wait until AppKit finishes handling Return, or it reselects the text.
+                DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(nil) }
+            }
+    }
+
+    private var deleteButton: some View {
+        Button { store.remove(watch.id) } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.plain)
+        .help("Delete stopwatch")
+        .opacity(hovering ? 1 : 0)
+    }
+
+    @ViewBuilder
+    private var time: some View {
+        if editing {
+            TimeEditor(initial: watch.elapsed(), font: timeFont, slotWidth: compact ? 32 : 62) { value in
+                store.setElapsed(watch.id, to: value)
+                editing = false
+            } onCancel: {
+                editing = false
+            }
+        } else {
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: !watch.isRunning)) { context in
+                Text(TimeFormat.full(watch.elapsed(at: context.date)))
+                    .font(timeFont)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .foregroundStyle(watch.isRunning ? accent : .primary)
+            }
+            .contentShape(Rectangle())
+            .onTapGesture(count: 2, perform: beginEdit)
+            .help("Double-click to set the time")
+        }
+    }
+
+    private func resetButton(size: CGFloat) -> some View {
+        Button { store.reset(watch.id) } label: {
+            Image(systemName: "arrow.counterclockwise")
+                .font(.system(size: size >= 30 ? 12 : 11, weight: .semibold))
+                .frame(width: size, height: size)
+                .background(.quaternary, in: Circle())
+        }
+        .buttonStyle(.plain)
+        .help("Reset to zero")
+        .disabled(watch.elapsed() == 0)
+    }
 }
 
 /// Three-slot editor (hours : minutes : seconds). Tab, Shift-Tab and the arrow keys
@@ -155,6 +223,7 @@ struct StopwatchCard: View {
 /// Escape cancels, and clicking away saves.
 struct TimeEditor: View {
     let font: Font
+    let slotWidth: CGFloat
     let onCommit: (TimeInterval) -> Void
     let onCancel: () -> Void
 
@@ -166,7 +235,7 @@ struct TimeEditor: View {
     @State private var finished = false
     @FocusState private var focus: Slot?
 
-    init(initial: TimeInterval, font: Font,
+    init(initial: TimeInterval, font: Font, slotWidth: CGFloat = 62,
          onCommit: @escaping (TimeInterval) -> Void,
          onCancel: @escaping () -> Void) {
         let total = Int(initial)
@@ -174,6 +243,7 @@ struct TimeEditor: View {
         _minutes = State(initialValue: String(format: "%02d", (total / 60) % 60))
         _seconds = State(initialValue: String(format: "%02d", total % 60))
         self.font = font
+        self.slotWidth = slotWidth
         self.onCommit = onCommit
         self.onCancel = onCancel
     }
@@ -204,7 +274,7 @@ struct TimeEditor: View {
             .textFieldStyle(.plain)
             .font(font)
             .multilineTextAlignment(.center)
-            .frame(width: 62)
+            .frame(width: slotWidth)
             .focused($focus, equals: which)
             .onChange(of: text.wrappedValue) { _, new in
                 let digits = String(new.filter(\.isNumber).prefix(2))
