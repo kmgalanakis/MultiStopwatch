@@ -14,5 +14,5 @@ jobs:
         run: ./build.sh
       - name: Check the bundle
         run: |
-          test -x Multi-Stopwatch.app/Contents/MacOS/Stopwatches
-          codesign --verify --verbose Multi-Stopwatch.app
+          test -x MultiStopwatch.app/Contents/MacOS/Stopwatches
+          codesign --verify --verbose MultiStopwatch.app

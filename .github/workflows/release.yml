@@ -29,9 +29,9 @@ jobs:
 
       - name: Package
         run: |
-          ditto -c -k --keepParent Multi-Stopwatch.app "Multi-Stopwatch-$VERSION.zip"
-          mkdir dmg && cp -R Multi-Stopwatch.app dmg/ && ln -s /Applications dmg/Applications
-          hdiutil create -volname "Multi-Stopwatch" -srcfolder dmg -ov -format UDZO "Multi-Stopwatch-$VERSION.dmg"
+          ditto -c -k --keepParent MultiStopwatch.app "MultiStopwatch-$VERSION.zip"
+          mkdir dmg && cp -R MultiStopwatch.app dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname "MultiStopwatch" -srcfolder dmg -ov -format UDZO "MultiStopwatch-$VERSION.dmg"
 
       - name: Publish release
         if: github.ref_type == 'tag'
@@ -39,14 +39,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" \
-            "Multi-Stopwatch-$VERSION.zip" "Multi-Stopwatch-$VERSION.dmg" \
-            --title "Multi-Stopwatch $VERSION" --generate-notes
+            "MultiStopwatch-$VERSION.zip" "MultiStopwatch-$VERSION.dmg" \
+            --title "MultiStopwatch $VERSION" --generate-notes
 
       - name: Keep the build for manual runs
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
-          name: Multi-Stopwatch-${{ env.VERSION }}
+          name: MultiStopwatch-${{ env.VERSION }}
           path: |
-            Multi-Stopwatch-*.zip
-            Multi-Stopwatch-*.dmg
+            MultiStopwatch-*.zip
+            MultiStopwatch-*.dmg

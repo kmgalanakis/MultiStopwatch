@@ -1,4 +1,4 @@
-# Multi-Stopwatch
+# MultiStopwatch
 
 A small native macOS app for running several stopwatches at once.
 
@@ -14,7 +14,7 @@ A small native macOS app for running several stopwatches at once.
 ## Install
 
 Download the latest `.dmg` or `.zip` from the [Releases](../../releases) page and move
-`Multi-Stopwatch.app` to your Applications folder.
+`MultiStopwatch.app` to your Applications folder.
 
 The app is not notarized, so macOS blocks it the first time. Right-click the app, choose
 **Open**, then confirm. You only need to do this once.
@@ -24,10 +24,10 @@ The app is not notarized, so macOS blocks it the first time. Right-click the app
 Requires macOS 14 or later and the Swift toolchain (Xcode or the Command Line Tools).
 
 ```sh
-./build.sh && open Multi-Stopwatch.app
+./build.sh && open MultiStopwatch.app
 ```
 
-`build.sh` builds a release binary and wraps it in `Multi-Stopwatch.app`. Two options:
+`build.sh` builds a release binary and wraps it in `MultiStopwatch.app`. Two options:
 
 - `UNIVERSAL=1` builds for both Apple silicon and Intel.
 - `VERSION=1.2.0` sets the app version.
