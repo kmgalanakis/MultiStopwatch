@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Builds Stopwatches.app in this folder. Run: ./build.sh && open Stopwatches.app
+# Builds Multi-Stopwatch.app in this folder. Run: ./build.sh && open Multi-Stopwatch.app
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -17,7 +17,7 @@ VERSION="${VERSION:-1.0}"
 swift build -c release "${ARCH_FLAGS[@]}"
 BIN="$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)/Stopwatches"
 
-APP="Stopwatches.app"
+APP="Multi-Stopwatch.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/Stopwatches"
@@ -28,8 +28,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>CFBundleName</key><string>Stopwatches</string>
-    <key>CFBundleDisplayName</key><string>Stopwatches</string>
+    <key>CFBundleName</key><string>Multi-Stopwatch</string>
+    <key>CFBundleDisplayName</key><string>Multi-Stopwatch</string>
     <key>CFBundleIdentifier</key><string>com.kmg.stopwatches</string>
     <key>CFBundleExecutable</key><string>Stopwatches</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>

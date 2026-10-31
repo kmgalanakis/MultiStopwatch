@@ -35,7 +35,7 @@ struct StopwatchesApp: App {
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
-        Window("Stopwatches", id: "main") {
+        Window("Multi-Stopwatch", id: "main") {
             ContentView()
                 .environmentObject(store)
         }
@@ -111,7 +111,7 @@ struct MenuBarContent: View {
 
             Divider().padding(.vertical, 4)
 
-            PanelButton("Quit Stopwatches", systemImage: "power") { NSApp.terminate(nil) }
+            PanelButton("Quit Multi-Stopwatch", systemImage: "power") { NSApp.terminate(nil) }
         }
         .padding(8)
         .frame(width: 280)
