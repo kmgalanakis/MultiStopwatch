@@ -9,10 +9,14 @@ if [ -d /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk ] && ! xcode-sel
     export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk
 fi
 
-# UNIVERSAL=1 builds for Apple silicon and Intel. VERSION sets the app version.
+# UNIVERSAL=1 builds for Apple silicon and Intel. VERSION sets the app version;
+# without it, the latest git tag is used (v1.2.0 becomes 1.2.0).
 ARCH_FLAGS=()
 if [ "${UNIVERSAL:-0}" = "1" ]; then ARCH_FLAGS=(--arch arm64 --arch x86_64); fi
-VERSION="${VERSION:-1.0}"
+if [ -z "${VERSION:-}" ]; then
+    VERSION="$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')"
+    VERSION="${VERSION:-1.0.0}"
+fi
 BUILD="${BUILD:-1}"
 
 swift build -c release "${ARCH_FLAGS[@]}"

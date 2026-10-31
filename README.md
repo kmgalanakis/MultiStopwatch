@@ -30,7 +30,7 @@ Requires macOS 14 or later and the Swift toolchain (Xcode or the Command Line To
 `build.sh` builds a release binary and wraps it in `MultiStopwatch.app`. Two options:
 
 - `UNIVERSAL=1` builds for both Apple silicon and Intel.
-- `VERSION=1.2.0` sets the app version.
+- `VERSION=1.2.0` sets the app version. Without it, the latest git tag is used.
 
 With only the Command Line Tools installed, the script builds against the 26.5 SDK,
 because the newest SDK needs a SwiftUI macro plugin that the tools do not include.

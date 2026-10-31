@@ -4,7 +4,6 @@ import AppKit
 struct AboutView: View {
     private let info = Bundle.main.infoDictionary ?? [:]
     private var version: String { info["CFBundleShortVersionString"] as? String ?? "1.0" }
-    private var build: String { info["CFBundleVersion"] as? String ?? "1" }
     private var copyright: String { info["NSHumanReadableCopyright"] as? String ?? "" }
 
     private static let repo = URL(string: "https://github.com/kmgalanakis/MultiStopwatch")!
@@ -18,7 +17,7 @@ struct AboutView: View {
             VStack(spacing: 4) {
                 Text("MultiStopwatch")
                     .font(.system(size: 26, weight: .semibold, design: .rounded))
-                Text("Version \(version) (\(build))")
+                Text("Version \(version)")
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
