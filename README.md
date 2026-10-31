@@ -1,15 +1,25 @@
-# Stopwatches
+# Multiwatch
 
 A small native macOS app for running several stopwatches at once.
+
+![Four stopwatches in the main window](docs/screenshots/main.png)
 
 - Add as many stopwatches as you need. Each has a name, a color and its own controls.
 - Double-click a time to set it by hand, with separate hours, minutes and seconds slots.
 - Keep the window always on top with the pin button or Shift-Command-T.
-- See the running time in the menu bar and control stopwatches from its menu.
+- See the running time in the menu bar. Click it for a panel with live times and quick controls.
 - Stopwatches survive a restart. A running stopwatch keeps counting while the app is closed.
 - The red close button hides the window. Click the app icon to bring it back.
 
-## Build and run
+## Install
+
+Download the latest `.dmg` or `.zip` from the [Releases](../../releases) page and move
+`Stopwatches.app` to your Applications folder.
+
+The app is not notarized, so macOS blocks it the first time. Right-click the app, choose
+**Open**, then confirm. You only need to do this once.
+
+## Build from source
 
 Requires macOS 14 or later and the Swift toolchain (Xcode or the Command Line Tools).
 
@@ -17,9 +27,25 @@ Requires macOS 14 or later and the Swift toolchain (Xcode or the Command Line To
 ./build.sh && open Stopwatches.app
 ```
 
-`build.sh` builds a release binary and wraps it in `Stopwatches.app`. With only the
-Command Line Tools installed, it builds against the 26.5 SDK, because the newest SDK
-needs a SwiftUI macro plugin that the tools do not include.
+`build.sh` builds a release binary and wraps it in `Stopwatches.app`. Two options:
+
+- `UNIVERSAL=1` builds for both Apple silicon and Intel.
+- `VERSION=1.2.0` sets the app version.
+
+With only the Command Line Tools installed, the script builds against the 26.5 SDK,
+because the newest SDK needs a SwiftUI macro plugin that the tools do not include.
+
+## Releases
+
+Pushing a tag that starts with `v` builds a universal app on GitHub Actions and publishes
+a release with a `.zip` and a `.dmg`:
+
+```sh
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+Run the **Release** workflow by hand from the Actions tab to test the build without
+publishing. The build is kept as a workflow artifact.
 
 ## App icon
 

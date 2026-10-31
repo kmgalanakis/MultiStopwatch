@@ -252,6 +252,8 @@ struct WindowConfigurator: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let v = NSView()
         DispatchQueue.main.async { apply(v.window) }
+        // SwiftUI focuses the first text field on launch, which selects a stopwatch name. Clear it once.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { v.window?.makeFirstResponder(nil) }
         return v
     }
 

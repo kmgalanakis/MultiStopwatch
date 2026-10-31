@@ -1,0 +1,52 @@
+name: Release
+
+# Push a tag like v1.2.0 to publish a GitHub release with a universal build.
+# Run the workflow by hand to test the build without publishing anything.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=0.0.0-dev" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build universal app bundle
+        run: UNIVERSAL=1 ./build.sh
+
+      - name: Package
+        run: |
+          ditto -c -k --keepParent Stopwatches.app "Multiwatch-$VERSION.zip"
+          mkdir dmg && cp -R Stopwatches.app dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname "Stopwatches" -srcfolder dmg -ov -format UDZO "Multiwatch-$VERSION.dmg"
+
+      - name: Publish release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            "Multiwatch-$VERSION.zip" "Multiwatch-$VERSION.dmg" \
+            --title "Multiwatch $VERSION" --generate-notes
+
+      - name: Keep the build for manual runs
+        if: github.ref_type != 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Multiwatch-${{ env.VERSION }}
+          path: |
+            Multiwatch-*.zip
+            Multiwatch-*.dmg

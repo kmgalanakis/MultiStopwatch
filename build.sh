@@ -9,8 +9,13 @@ if [ -d /Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk ] && ! xcode-sel
     export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk
 fi
 
-swift build -c release
-BIN="$(swift build -c release --show-bin-path)/Stopwatches"
+# UNIVERSAL=1 builds for Apple silicon and Intel. VERSION sets the app version.
+ARCH_FLAGS=()
+if [ "${UNIVERSAL:-0}" = "1" ]; then ARCH_FLAGS=(--arch arm64 --arch x86_64); fi
+VERSION="${VERSION:-1.0}"
+
+swift build -c release "${ARCH_FLAGS[@]}"
+BIN="$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)/Stopwatches"
 
 APP="Stopwatches.app"
 rm -rf "$APP"
@@ -29,7 +34,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleExecutable</key><string>Stopwatches</string>
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSHighResolutionCapable</key><true/>
