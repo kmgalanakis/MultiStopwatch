@@ -41,6 +41,12 @@ struct StopwatchesApp: App {
         }
         .defaultSize(width: 620, height: 420)
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About MultiStopwatch") {
+                    openWindow(id: "about")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
+            }
             CommandGroup(replacing: .newItem) {
                 Button("New Stopwatch") { store.add() }
                     .keyboardShortcut("n")
@@ -50,6 +56,12 @@ struct StopwatchesApp: App {
                     .keyboardShortcut("t", modifiers: [.command, .shift])
             }
         }
+
+        Window("About MultiStopwatch", id: "about") {
+            AboutView()
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
 
         MenuBarExtra {
             MenuBarContent()

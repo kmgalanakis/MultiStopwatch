@@ -13,6 +13,7 @@ fi
 ARCH_FLAGS=()
 if [ "${UNIVERSAL:-0}" = "1" ]; then ARCH_FLAGS=(--arch arm64 --arch x86_64); fi
 VERSION="${VERSION:-1.0}"
+BUILD="${BUILD:-1}"
 
 swift build -c release "${ARCH_FLAGS[@]}"
 BIN="$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)/Stopwatches"
@@ -35,7 +36,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
-    <key>CFBundleVersion</key><string>1</string>
+    <key>CFBundleVersion</key><string>$BUILD</string>
+    <key>NSHumanReadableCopyright</key><string>© 2026 Konstantinos Galanakis</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSHighResolutionCapable</key><true/>
 </dict>

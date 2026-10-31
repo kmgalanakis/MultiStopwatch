@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag like v1.2.0 to publish a GitHub release with a universal build.
+# Push a tag like v1.2.0 to create a draft GitHub release with a universal build.
+# Review the draft on GitHub and publish it from there.
 # Run the workflow by hand to test the build without publishing anything.
 on:
   push:
@@ -25,7 +26,7 @@ jobs:
           fi
 
       - name: Build universal app bundle
-        run: UNIVERSAL=1 ./build.sh
+        run: UNIVERSAL=1 BUILD="$GITHUB_RUN_NUMBER" ./build.sh
 
       - name: Package
         run: |
@@ -40,7 +41,7 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" \
             "MultiStopwatch-$VERSION.zip" "MultiStopwatch-$VERSION.dmg" \
-            --title "MultiStopwatch $VERSION" --generate-notes
+            --title "MultiStopwatch $VERSION" --generate-notes --draft
 
       - name: Keep the build for manual runs
         if: github.ref_type != 'tag'

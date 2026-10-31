@@ -37,8 +37,8 @@ because the newest SDK needs a SwiftUI macro plugin that the tools do not includ
 
 ## Releases
 
-Pushing a tag that starts with `v` builds a universal app on GitHub Actions and publishes
-a release with a `.zip` and a `.dmg`:
+Pushing a tag that starts with `v` builds a universal app on GitHub Actions and creates
+a draft release with a `.zip` and a `.dmg`. Review the draft on GitHub, then publish it.
 
 ```sh
 git tag v1.0.0 && git push origin v1.0.0
