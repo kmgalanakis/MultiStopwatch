@@ -1,10 +1,17 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
+
+extension UTType {
+    /// Private drag type for reordering cards. Text fields ignore it, unlike plain text.
+    static let stopwatchCard = UTType(exportedAs: "com.kmg.stopwatches.card")
+}
 
 struct ContentView: View {
     @EnvironmentObject var store: StopwatchStore
     @AppStorage("alwaysOnTop") private var alwaysOnTop = false
     @AppStorage("compactCards") private var compact = false
+    @State private var dragging: Stopwatch.ID?
 
     private var spacing: CGFloat { compact ? 10 : 16 }
     private var columns: [GridItem] {
@@ -19,6 +26,26 @@ struct ContentView: View {
                 LazyVGrid(columns: columns, spacing: spacing) {
                     ForEach($store.stopwatches) { $watch in
                         StopwatchCard(watch: $watch)
+                            .opacity(dragging == watch.id ? 0 : 1)
+                            .overlay {
+                                if dragging == watch.id { dropPlaceholder.transition(.opacity) }
+                            }
+                            .onDrag {
+                                let id = watch.id
+                                // Set after the drag image is taken, so the image still shows the card.
+                                DispatchQueue.main.async { dragging = id }
+                                let provider = NSItemProvider()
+                                provider.registerDataRepresentation(
+                                    forTypeIdentifier: UTType.stopwatchCard.identifier,
+                                    visibility: .ownProcess
+                                ) { completion in
+                                    completion(Data(id.uuidString.utf8), nil)
+                                    return nil
+                                }
+                                return provider
+                            }
+                            .onDrop(of: [.stopwatchCard], delegate: ReorderDropDelegate(
+                                target: watch.id, store: store, dragging: $dragging))
                     }
                 }
                 .padding(compact ? 14 : 20)
@@ -26,6 +53,20 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 400, minHeight: 240)
+        // Accept the drop anywhere in the window, including the gaps between cards,
+        // so macOS does not slide the dragged image back to where it started.
+        .onDrop(of: [.stopwatchCard], delegate: AcceptDropDelegate(dragging: $dragging))
+        .task(id: dragging) {
+            // The drag ends when the mouse button is released, whether the card was
+            // dropped or the drag was cancelled. Show the card only after macOS has
+            // removed the floating drag image, so the two never appear together.
+            guard dragging != nil else { return }
+            while NSEvent.pressedMouseButtons & 1 != 0 {
+                do { try await Task.sleep(for: .milliseconds(50)) } catch { return }
+            }
+            do { try await Task.sleep(for: .milliseconds(180)) } catch { return }
+            withAnimation(.dropSettle) { dragging = nil }
+        }
         .background(VisualEffectBackground())
         .background(WindowConfigurator(alwaysOnTop: alwaysOnTop))
         .toolbar {
@@ -47,6 +88,15 @@ struct ContentView: View {
         }
     }
 
+    /// Empty slot shown where the dragged card will land.
+    private var dropPlaceholder: some View {
+        let shape = RoundedRectangle(cornerRadius: compact ? 12 : 18, style: .continuous)
+        return shape
+            .fill(Color.primary.opacity(0.04))
+            .overlay(shape.strokeBorder(Color.primary.opacity(0.2),
+                                        style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])))
+    }
+
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "stopwatch")
@@ -59,6 +109,44 @@ struct ContentView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 300)
     }
+}
+
+extension Animation {
+    /// Quick fade-in for a dropped card.
+    static let dropSettle = Animation.easeOut(duration: 0.15)
+}
+
+/// Live reordering: as a dragged card passes over another card, the two swap places.
+struct ReorderDropDelegate: DropDelegate {
+    let target: Stopwatch.ID
+    let store: StopwatchStore
+    @Binding var dragging: Stopwatch.ID?
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != target else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            store.move(dragging, to: target)
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    // The order is already updated; the window shows the card once the drag has ended.
+    func performDrop(info: DropInfo) -> Bool { true }
+}
+
+/// Accepts a card dropped between cards. The order is already updated while dragging.
+struct AcceptDropDelegate: DropDelegate {
+    @Binding var dragging: Stopwatch.ID?
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    // The order is already updated; the window shows the card once the drag has ended.
+    func performDrop(info: DropInfo) -> Bool { true }
 }
 
 struct StopwatchCard: View {
@@ -344,6 +432,7 @@ struct WindowConfigurator: NSViewRepresentable {
         window.collectionBehavior = alwaysOnTop ? [.canJoinAllSpaces, .fullScreenAuxiliary] : []
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
-        window.isMovableByWindowBackground = true
+        // Off so dragging a card reorders it instead of moving the window.
+        window.isMovableByWindowBackground = false
     }
 }

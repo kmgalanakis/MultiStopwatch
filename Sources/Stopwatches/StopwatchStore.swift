@@ -75,6 +75,15 @@ final class StopwatchStore: ObservableObject {
         refreshMenuTitle()
     }
 
+    /// Moves a stopwatch into another one's position. Used for drag and drop reordering.
+    func move(_ id: Stopwatch.ID, to target: Stopwatch.ID) {
+        guard let from = stopwatches.firstIndex(where: { $0.id == id }),
+              let to = stopwatches.firstIndex(where: { $0.id == target }),
+              from != to else { return }
+        stopwatches.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+        refreshMenuTitle()
+    }
+
     private func refreshMenuTitle() {
         let running = stopwatches.filter(\.isRunning)
         var title = ""
