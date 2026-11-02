@@ -11,7 +11,8 @@ Compact cards fit more stopwatches in a small window:
 - Add as many stopwatches as you need. Each has a name, a color and its own controls.
 - Drag a card to reorder your stopwatches.
 - Switch to compact, one-line cards with the toolbar button or Option-Command-C.
-- Double-click a time to set it by hand, with separate hours, minutes and seconds slots.
+- Click a time to start or pause it.
+- Right-click a card and choose Set Time… to set the time by hand, with separate hours, minutes and seconds slots.
 - Keep the window always on top with the pin button or Shift-Command-T.
 - See the running time in the menu bar. Click it for a panel with live times and quick controls.
 - Stopwatches survive a restart. A running stopwatch keeps counting while the app is closed.
