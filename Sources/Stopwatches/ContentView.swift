@@ -288,8 +288,9 @@ struct StopwatchCard: View {
                     .foregroundStyle(watch.isRunning ? accent : .primary)
             }
             .contentShape(Rectangle())
-            .onTapGesture(count: 2, perform: beginEdit)
-            .help("Double-click to set the time")
+            // No double-click handler here: one would delay every single click.
+            .onTapGesture { store.toggle(watch.id) }
+            .help("Click to start or pause. Right-click to set the time")
         }
     }
 
