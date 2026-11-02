@@ -22,6 +22,12 @@ enum Palette {
         Color(red: 1.00, green: 0.62, blue: 0.20),
         Color(red: 0.62, green: 0.40, blue: 0.95),
         Color(red: 0.15, green: 0.74, blue: 0.84),
+        Color(red: 1.00, green: 0.80, blue: 0.15),
+        Color(red: 0.95, green: 0.40, blue: 0.75),
+        Color(red: 0.55, green: 0.80, blue: 0.20),
+        Color(red: 0.65, green: 0.45, blue: 0.30),
+        Color(red: 0.50, green: 0.56, blue: 0.64),
+        Color(red: 0.10, green: 0.55, blue: 0.55),
     ]
 
     static func color(_ index: Int) -> Color {

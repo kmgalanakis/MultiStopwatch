@@ -30,8 +30,18 @@ final class StopwatchStore: ObservableObject {
 
     func add() {
         let index = stopwatches.count
-        stopwatches.append(Stopwatch(name: "Stopwatch \(index + 1)", colorIndex: index))
+        stopwatches.append(Stopwatch(name: "Stopwatch \(index + 1)", colorIndex: nextColorIndex()))
         refreshMenuTitle()
+    }
+
+    /// The first palette color no stopwatch uses. When every color is taken, the least used one.
+    private func nextColorIndex() -> Int {
+        let count = Palette.colors.count
+        var usage = [Int](repeating: 0, count: count)
+        for watch in stopwatches {
+            usage[((watch.colorIndex % count) + count) % count] += 1
+        }
+        return usage.indices.min { usage[$0] < usage[$1] } ?? 0
     }
 
     func toggle(_ id: Stopwatch.ID) {
