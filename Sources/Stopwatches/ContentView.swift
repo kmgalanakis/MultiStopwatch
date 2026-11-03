@@ -155,6 +155,7 @@ struct StopwatchCard: View {
     @AppStorage("compactCards") private var compact = false
     @State private var hovering = false
     @State private var editing = false
+    @State private var confirmingDelete = false
 
     private var accent: Color { Palette.color(watch.colorIndex) }
     private var cornerRadius: CGFloat { compact ? 12 : 18 }
@@ -182,7 +183,23 @@ struct StopwatchCard: View {
             Button("Set Time…", action: beginEdit)
             Button("Reset") { store.reset(watch.id) }
             Divider()
+            Button("Delete", role: .destructive, action: requestDelete)
+        }
+        .overlay(MiddleClickCatcher(action: requestDelete))
+        .alert("Delete “\(watch.name)”?", isPresented: $confirmingDelete) {
             Button("Delete", role: .destructive) { store.remove(watch.id) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Its time of \(TimeFormat.compact(watch.elapsed())) will be lost.")
+        }
+    }
+
+    /// A stopwatch at zero is deleted at once; any other one asks first.
+    private func requestDelete() {
+        if watch.elapsed() > 0 {
+            confirmingDelete = true
+        } else {
+            store.remove(watch.id)
         }
     }
 
@@ -260,7 +277,7 @@ struct StopwatchCard: View {
     }
 
     private var deleteButton: some View {
-        Button { store.remove(watch.id) } label: {
+        Button(action: requestDelete) {
             Image(systemName: "xmark")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(.secondary)
@@ -389,6 +406,35 @@ struct TimeEditor: View {
         finished = true
         let h = Double(hours) ?? 0, m = Double(minutes) ?? 0, s = Double(seconds) ?? 0
         onCommit(h * 3600 + m * 60 + s)
+    }
+}
+
+/// Runs an action on a middle-button click. SwiftUI has no middle-click gesture, so this
+/// view claims only middle-button events and lets every other event reach the views below.
+struct MiddleClickCatcher: NSViewRepresentable {
+    let action: () -> Void
+
+    func makeNSView(context: Context) -> CatcherView { CatcherView() }
+    func updateNSView(_ view: CatcherView, context: Context) { view.action = action }
+
+    final class CatcherView: NSView {
+        var action: (() -> Void)?
+
+        override func hitTest(_ point: NSPoint) -> NSView? {
+            guard let event = NSApp.currentEvent,
+                  event.type == .otherMouseDown || event.type == .otherMouseUp,
+                  event.buttonNumber == 2 else { return nil }
+            return super.hitTest(point)
+        }
+
+        // Claims the press so the release comes back to this view.
+        override func otherMouseDown(with event: NSEvent) {}
+
+        override func otherMouseUp(with event: NSEvent) {
+            if event.buttonNumber == 2, bounds.contains(convert(event.locationInWindow, from: nil)) {
+                action?()
+            }
+        }
     }
 }
 
