@@ -65,8 +65,9 @@ final class StopwatchStore: ObservableObject {
 
     func setElapsed(_ id: Stopwatch.ID, to seconds: TimeInterval) {
         guard let i = stopwatches.firstIndex(where: { $0.id == id }) else { return }
+        // Setting the time also stops the stopwatch, so it waits for a manual start.
         stopwatches[i].accumulated = seconds
-        if stopwatches[i].isRunning { stopwatches[i].startedAt = Date() }
+        stopwatches[i].startedAt = nil
         refreshMenuTitle()
     }
 

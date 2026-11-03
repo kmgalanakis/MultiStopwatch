@@ -12,6 +12,7 @@ Compact cards fit more stopwatches in a small window:
 - Drag a card to reorder your stopwatches.
 - Switch to compact, one-line cards with the toolbar button or Option-Command-C.
 - Click a time to start or pause it.
+- Middle-click a card to stop and delete it.
 - Right-click a card and choose Set Time… to set the time by hand, with separate hours, minutes and seconds slots.
 - Keep the window always on top with the pin button or Shift-Command-T.
 - See the running time in the menu bar. Click it for a panel with live times and quick controls.
