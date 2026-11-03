@@ -57,8 +57,9 @@ final class StopwatchStore: ObservableObject {
 
     func reset(_ id: Stopwatch.ID) {
         guard let i = stopwatches.firstIndex(where: { $0.id == id }) else { return }
+        // Reset also stops the stopwatch, so it waits at zero for a manual start.
         stopwatches[i].accumulated = 0
-        if stopwatches[i].isRunning { stopwatches[i].startedAt = Date() }
+        stopwatches[i].startedAt = nil
         refreshMenuTitle()
     }
 
