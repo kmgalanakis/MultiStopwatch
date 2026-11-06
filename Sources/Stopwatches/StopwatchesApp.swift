@@ -196,6 +196,15 @@ private struct PanelRow: View {
             }
             .buttonStyle(.plain)
             .help(watch.isRunning ? "Pause" : "Start")
+            Button { store.reset(watch.id) } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 26, height: 26)
+                    .background(.quaternary, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .help("Reset to zero")
+            .disabled(watch.elapsed() == 0)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
