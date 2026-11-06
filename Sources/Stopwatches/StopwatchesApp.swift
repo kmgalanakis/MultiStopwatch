@@ -175,39 +175,129 @@ struct MenuBarContent: View {
 private struct PanelRow: View {
     @EnvironmentObject var store: StopwatchStore
     let watch: Stopwatch
+    @State private var hovering = false
+    @State private var confirmingDelete = false
+
+    private var accent: Color { Palette.color(watch.colorIndex) }
 
     var body: some View {
-        let accent = Palette.color(watch.colorIndex)
-        HStack(spacing: 10) {
-            Circle().fill(accent).frame(width: 9, height: 9)
-            Text(watch.name).lineLimit(1)
-            Spacer(minLength: 8)
-            TimelineView(.periodic(from: .now, by: 1)) { context in
-                Text(TimeFormat.compact(watch.elapsed(at: context.date)))
-                    .monospacedDigit()
-                    .foregroundStyle(watch.isRunning ? accent : .secondary)
+        ZStack {
+            if confirmingDelete {
+                confirmRow.transition(.opacity)
+            } else {
+                controlsRow.transition(.opacity)
             }
-            Button { store.toggle(watch.id) } label: {
-                Image(systemName: watch.isRunning ? "pause.fill" : "play.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 26, height: 26)
-                    .background(accent, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .help(watch.isRunning ? "Pause" : "Start")
-            Button { store.reset(watch.id) } label: {
-                Image(systemName: "arrow.counterclockwise")
-                    .font(.system(size: 11, weight: .semibold))
-                    .frame(width: 26, height: 26)
-                    .background(.quaternary, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .help("Reset to zero")
-            .disabled(watch.elapsed() == 0)
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
+        .background(rowBackground, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .animation(.easeOut(duration: 0.15), value: confirmingDelete)
+        .animation(.easeOut(duration: 0.12), value: hovering)
+        .onHover { hovering = $0 }
+    }
+
+    private var rowBackground: Color {
+        if confirmingDelete { return Color.red.opacity(0.12) }
+        return hovering ? Color.primary.opacity(0.06) : .clear
+    }
+
+    private var controlsRow: some View {
+        HStack(spacing: 10) {
+            Circle().fill(accent).frame(width: 8, height: 8)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(watch.name)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(TimeFormat.compact(watch.elapsed(at: context.date)))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded).monospacedDigit())
+                        .foregroundStyle(watch.isRunning ? accent : .primary)
+                }
+            }
+            Spacer(minLength: 4)
+            circleButton(watch.isRunning ? "pause.fill" : "play.fill",
+                         help: watch.isRunning ? "Pause" : "Start", prominent: true) {
+                store.toggle(watch.id)
+            }
+            circleButton("arrow.counterclockwise", help: "Reset to zero") {
+                store.reset(watch.id)
+            }
+            .disabled(watch.elapsed() == 0)
+            Button(action: requestDelete) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.tertiary)
+                    .frame(width: 16, height: 26)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Delete stopwatch")
+            .opacity(hovering ? 1 : 0)
+        }
+    }
+
+    /// The question is asked inside the row: an alert would take focus and close the panel.
+    private var confirmRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "trash")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.red)
+                Text("Delete “\(watch.name)”?")
+                    .font(.system(size: 12, weight: .semibold))
+                    .lineLimit(1)
+            }
+            HStack(spacing: 8) {
+                Text("\(TimeFormat.compact(watch.elapsed())) will be lost")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .fixedSize()
+                Spacer(minLength: 4)
+                capsuleButton("Cancel", fill: Color.primary.opacity(0.08), text: .primary) {
+                    confirmingDelete = false
+                }
+                capsuleButton("Delete", fill: .red, text: .white) {
+                    store.remove(watch.id)
+                }
+            }
+        }
+    }
+
+    /// A stopwatch at zero is deleted at once; any other one asks first.
+    private func requestDelete() {
+        if watch.elapsed() > 0 {
+            confirmingDelete = true
+        } else {
+            store.remove(watch.id)
+        }
+    }
+
+    private func circleButton(_ symbol: String, help: String, prominent: Bool = false,
+                              action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(prominent ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                .frame(width: 26, height: 26)
+                .background(prominent ? AnyShapeStyle(accent) : AnyShapeStyle(.quaternary), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+
+    private func capsuleButton(_ title: String, fill: Color, text: Color,
+                               action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(text)
+                .padding(.horizontal, 9)
+                .frame(height: 22)
+                .background(fill, in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -311,3 +401,4 @@ private struct PanelButton: View {
         .onHover { hovering = $0 }
     }
 }
+

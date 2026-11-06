@@ -15,7 +15,7 @@ Compact cards fit more stopwatches in a small window:
 - Middle-click a card to stop and delete it.
 - Right-click a card and choose Set Time… to set the time by hand, with separate hours, minutes and seconds slots.
 - Keep the window always on top with the pin button or Shift-Command-T.
-- See the running time in the menu bar. Click it for a panel with live times and buttons to start, pause and reset each stopwatch.
+- See the running time in the menu bar. Click it for a panel with live times and buttons to start, pause, reset and delete each stopwatch.
 - Stopwatches survive a restart. A running stopwatch keeps counting while the app is closed.
 - The red close button hides the window. Click the app icon to bring it back.
 
