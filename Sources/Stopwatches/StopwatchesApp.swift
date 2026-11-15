@@ -20,6 +20,46 @@ final class CloseHider: NSObject {
     @objc func hide(_ sender: Any?) { MainWindow.window?.orderOut(nil) }
 }
 
+/// Tooltip on the menu bar icon that lists the running stopwatches.
+/// MenuBarExtra has no tooltip API, so this finds the status bar button and
+/// asks the store for the text each time the tooltip opens.
+final class MenuBarTooltip: NSObject, NSViewToolTipOwner {
+    private static let shared = MenuBarTooltip()
+    private weak var store: StopwatchStore?
+    private var installed = false
+
+    @MainActor
+    static func install(_ store: StopwatchStore) {
+        shared.store = store
+        guard !shared.installed else { return }
+        // There is one status bar button per display.
+        let buttons = NSApp.windows
+            .filter { $0.className.contains("NSStatusBarWindow") }
+            .compactMap { findButton(in: $0.contentView) }
+        guard !buttons.isEmpty else {
+            // The status item does not exist yet right after launch.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { install(store) }
+            return
+        }
+        shared.installed = true
+        for button in buttons {
+            // The button grows as the time text changes, so cover more than its current size.
+            button.addToolTip(NSRect(x: 0, y: 0, width: 10_000, height: 10_000), owner: shared, userData: nil)
+        }
+    }
+
+    private static func findButton(in view: NSView?) -> NSView? {
+        guard let view else { return nil }
+        if view is NSStatusBarButton { return view }
+        return view.subviews.lazy.compactMap { findButton(in: $0) }.first
+    }
+
+    func view(_ view: NSView, stringForToolTip tag: NSView.ToolTipTag,
+              point: NSPoint, userData data: UnsafeMutableRawPointer?) -> String {
+        MainActor.assumeIsolated { store?.runningSummary() ?? "" }
+    }
+}
+
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var clickMonitor: Any?
 
