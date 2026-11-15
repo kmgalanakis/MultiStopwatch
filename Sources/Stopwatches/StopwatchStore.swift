@@ -5,7 +5,8 @@ final class StopwatchStore: ObservableObject {
     @Published var stopwatches: [Stopwatch] {
         didSet { save() }
     }
-    /// Text shown next to the icon in the menu bar. Empty when nothing is running.
+    /// Text shown next to the icon in the menu bar. Shows a paused time when nothing is running.
+    /// Empty when every stopwatch is at zero.
     @Published private(set) var menuTitle = ""
 
     private static let defaultsKey = "stopwatches.v1"
@@ -24,6 +25,7 @@ final class StopwatchStore: ObservableObject {
         }
         RunLoop.main.add(t, forMode: .common)
         timer = t
+        MenuBarTooltip.install(self)
     }
 
     var runningCount: Int { stopwatches.filter(\.isRunning).count }
@@ -96,12 +98,22 @@ final class StopwatchStore: ObservableObject {
         refreshMenuTitle()
     }
 
+    /// One line per running stopwatch, for the menu bar tooltip.
+    func runningSummary() -> String {
+        let running = stopwatches.filter(\.isRunning)
+        if running.isEmpty { return "No stopwatches running" }
+        return running.map { "\($0.name)  \(TimeFormat.compact($0.elapsed()))" }
+            .joined(separator: "\n")
+    }
+
     private func refreshMenuTitle() {
         let running = stopwatches.filter(\.isRunning)
         var title = ""
         if let first = running.first {
             title = TimeFormat.compact(first.elapsed())
             if running.count > 1 { title += " +\(running.count - 1)" }
+        } else if let paused = stopwatches.first(where: { $0.accumulated > 0 }) {
+            title = TimeFormat.compact(paused.elapsed())
         }
         if title != menuTitle { menuTitle = title }
     }
